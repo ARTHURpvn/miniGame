@@ -1,7 +1,7 @@
 'use client';
 import React, {useState, useEffect, useRef} from 'react';
 
-export default function Home() {
+export default function home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [randomKey, setRandomKey]     = useState([]);
   const [arrayKeys, setArrayKeys]     = useState([])
@@ -9,7 +9,9 @@ export default function Home() {
   const [numWin, setNumWin] = useState(0)
   const [challengeMode, setChallengeMode] = useState(false);
   const [score, setScore] = useState(0);
+  
   const [arrayScore, setArrayScore] = useState([]);
+  const [scoreOrganized, setScoreOrganized] = useState(false);
 
   const [time, setTime]   = useState(100);
   const [loose, setLoose] = useState(false);
@@ -43,6 +45,7 @@ export default function Home() {
       selecionadas.push(alf.charAt(randonIndex));
     }    
 
+    // Verifica se esta no modo desafio
     if (challengeMode && numWin == 0) {
       setTime(100);
 
@@ -61,9 +64,11 @@ export default function Home() {
     setWin(false);
     setArrayKeys([]);
     resetSpanColors();
+    setScoreOrganized(false);
   }
 
 
+  // Reinicia o Jogo
   function restartGame(){    
     if (challengeMode && !win && !loose) {
       setTime((prevTime) => prevTime + 20);
@@ -93,7 +98,8 @@ export default function Home() {
   }
 
 
-  function back() {
+  // Funcao de voltar a tela inicial
+  function backInitial() {
     setLoose(false);
     setWin(false);
     setGameStarted(false);
@@ -120,19 +126,21 @@ export default function Home() {
         setTime((prevTime) => prevTime - 1);
       }, 50);
 
-    } else if (time === 0) {
+    } else if (time === 0 && !scoreOrganized) {
       clearInterval(interval);
 
-      if(challengeMode && numWin > 0) {
+      // Verifica se esta no modo desafio com alguma vitoria para mandar pra tela certa
+      if(challengeMode && numWin > 0 ) {
         setWin(true);
         organizeScore();
+        setScoreOrganized(true);
       } 
 
       updateGame()
     }
 
     return () => clearInterval(interval);
-  }, [gameStarted, time]);
+  }, [gameStarted, time, win, numWin, scoreOrganized, challengeMode]);
 
 
   // Verificação da tecla apertada e a Aleatoria
@@ -142,7 +150,7 @@ export default function Home() {
       let allCorrect = true
       
       if (alf.includes(pressedKey)) {
-        arrayKeys.push(pressedKey)
+        arrayKeys.push(pressedKey);
 
         for (let i = 0; i < arrayKeys.length; i++) {
           const spanKey = spanArray.current[i];
@@ -162,19 +170,23 @@ export default function Home() {
         if (arrayKeys.length === 6 && allCorrect) {
           if(challengeMode) {
             setNumWin(numWin + 1);
-            const _score = (numWin * 5) * 12 + 10;
+            const _score = (numWin * 2) + (time * 5);
             setScore(score + _score);
 
+            setScoreOrganized(false);
             restartGame();
 
           } else {
             setWin(true);
+            setScoreOrganized(false);
             updateGame();
           }
 
+        // Quando apertar tecla errada manda pra tela de vitoria (se tiver alguma vitoria)
         } else if (!allCorrect) {
           if(numWin > 0) {
             setWin(true);
+            setScoreOrganized(true);
             organizeScore();
 
           } else {
@@ -195,21 +207,45 @@ export default function Home() {
     return() => {
       window.removeEventListener('keydown', keyPressed);
     }
-  }, [gameStarted, randomKey, win, loose, challengeMode, numWin]);
+  }, [gameStarted, randomKey, win, loose, challengeMode, numWin, scoreOrganized, arrayKeys]);
 
 
   return (
     <main>
 
       {!gameStarted ? (
-        <div className='card text-white'>
-          <div id="title" className='text-4xl font-bold absolute top-10'>
-            <h1 className='text-white'> MINI-GAME </h1>
+        <div>
+          <div className='card text-white'>
+            <div id="title" className='text-4xl font-bold absolute top-10'>
+              <h1 className='text-white'> MINI-GAME </h1>
+            </div>
+            <div className='flex flex-col gap-2 absolute bottom-10'>
+              <button onClick={normalGame} className='text-xl bg-blue-700 px-10 py-2 bottom-10 rounded-md'> INICIAR </button>
+              <button onClick={challengeGame} className='text-xl bg-gray-700 px-10 py-2 bottom-10 rounded-md'> DESAFIO </button>
+            </div>
           </div>
-          <div className='flex flex-col gap-2 absolute bottom-10'>
-            <button onClick={normalGame} className='text-xl bg-blue-700 px-10 py-2 bottom-10 rounded-md'> INICIAR </button>
-            <button onClick={challengeGame} className='text-xl bg-gray-700 px-10 py-2 bottom-10 rounded-md'> DESAFIO </button>
+
+          {numWin != 0 ? (
+            <div className='card-rank text-white flex justify-center text-center'>
+            <div id="title" className='text-4xl font-bold absolute top-5'>
+              <h1 className='text-white'> RANKING </h1>
+            </div>
+
+            <div className='gap-4 divide-y divide-y-reverse absolute top-20 divide-slate-400'>
+              <div className='grid grid-cols-2 gap-10 mb-6'>
+                <h3 className='w-10 font-bold'> Posição </h3>
+                <h3 className='w-24 font-bold text-left'> Pontos </h3>
+              </div>
+              
+              {arrayScore.map((key, index) => (
+                <div className='grid grid-cols-2 '>
+                  <p className='w-10'>{index + 1}</p>
+                  <p className='w-26'>{key} Pontos</p>
+                </div>
+              ))}
+            </div>
           </div>
+          ) : null}
         </div>
       ) : null} 
       
@@ -250,7 +286,7 @@ export default function Home() {
           <p> Sucesso! </p>
 
           <div className='flex gap-4 absolute bottom-10'>
-            <button onClick={back} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
+            <button onClick={backInitial} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
             <button onClick={restartGame} className='text-xl bg-blue-700 px-8 py-1 rounded-md'> Jogar Novamente </button>
           </div>
         </div>
@@ -266,7 +302,7 @@ export default function Home() {
           <p className='text-white text-sm'> Você falhou </p>
 
           <div className='flex gap-4 absolute bottom-10'>
-          <button onClick={back} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
+          <button onClick={backInitial} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
           <button onClick={restartGame} className='text-xl bg-blue-700 px-8 py-1 rounded-md'> Tente Novamente </button>
           </div>
         </div>
@@ -283,7 +319,7 @@ export default function Home() {
             <p> Parabens, voce conseguiu  {score} pontos </p>
 
             <div className='flex gap-4 absolute bottom-10'>
-              <button onClick={back} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
+              <button onClick={backInitial} className='text-xl bg-gray-700 px-8 py-1 rounded-md'> Voltar </button>
               <button onClick={restartGame} className='text-xl bg-blue-700 px-8 py-1 rounded-md'> Jogar Novamente </button>
             </div>
           </div>
